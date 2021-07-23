@@ -177,13 +177,6 @@ md"""### A final note on benchmarks
 >This is important for those of us who want to work on new problems and to go beyond endlessly recycling the solutions of the past.
 """
 
-# ╔═╡ 8a1ca72c-921f-11eb-022a-e937aac3fb66
-br
-
-# ╔═╡ d790b994-921f-11eb-1405-0dcfd94d38e2
-md"#### See also: 
-##### ['Adventures in Code Generation'](https://www.youtube.com/watch?v=mSgXWpvQEHE&list=PLP8iPy9hna6StY9tIJIUN3F_co9A0zh0H&index=5) metaprogramming presentation from  JuliaCon 2019 on YouTube"
-
 # ╔═╡ ca6e9678-7118-11eb-25bd-39cd6b1416c3
 hr
 
@@ -359,7 +352,10 @@ hr
 # ╔═╡ 36292f5d-6bfe-415c-a119-35fd12cc4bd4
 md"""## Metaprogramming
 ### Writing functions that write other functions.
-"""
+
+
+#### For more in-depth information see:
+##### ['Adventures in Code Generation'](https://www.youtube.com/watch?v=mSgXWpvQEHE&list=PLP8iPy9hna6StY9tIJIUN3F_co9A0zh0H&index=5) metaprogramming presentation from  JuliaCon 2019 on YouTube"""
 
 # ╔═╡ 9376a8b8-0719-4b97-bd1a-f1ffe34b4a87
 macro only1(code)
@@ -630,7 +626,6 @@ br
 # ╔═╡ 82081be6-7070-11eb-176c-bd1e2329373e
 md"""
 ##### The Python version - requires numpy and sgp4 
-##### `Conda.pip("install", "sgp4")`
 
 ```
 import timeit
@@ -707,8 +702,14 @@ def vals(sats, bases, rems):
 
 def the_time():
 	return np.min(timeit.repeat('vals(satellites, jd_bases, jd_rems)', setup=the_setup, number=1, repeat=20))"""
+	pytime = let
+		try
+			pytime = py"the_time"()
+		catch e
+			pytime = 1.1  # Time on home computer.
+		end
+	end
 	
-	pytime = py"the_time"()
 	md"#### Python time to beat $(round(pytime, digits=2)) seconds."
 end
 
@@ -811,6 +812,26 @@ bigbr
 # ╔═╡ 5a33f654-657c-11eb-1a9c-1bb3baf532f0
 md"### Can Julia do even better? ABSOLUTELY!"
 
+# ╔═╡ cb97ce85-ba76-419d-bc1d-3e63b3b39519
+hr
+
+# ╔═╡ add016be-fae2-407d-a45c-10f7ed25aa19
+md"""
+## Parallel programming
+
+### Parallelizing code *can be* easy.
+
+### Types of parallelism that Julia supports
+
+- synchronous & asynchronous tasks
+- multi-threading
+- distributed computing (multiple-processing, distributed data)
+- GPU computing
+"""
+
+# ╔═╡ 245b7dcd-9b6c-43ff-b7ca-8edd81fa3a86
+br
+
 # ╔═╡ a8398ca8-657d-11eb-0a10-fd6c26ceeffd
 md"""## Step 1 - Use for-loop "long version" """
 
@@ -853,9 +874,6 @@ end
 # ╔═╡ d9c50951-7623-4729-83d8-dcc351194585
 br
 
-# ╔═╡ 990d362a-92e2-11eb-0289-6d703732f1a0
-md"## Multi-threaded runtime"
-
 # ╔═╡ e23ec8ee-d035-46db-8da3-b04d0fe844f6
 nt = Threads.nthreads()  # This checks the number of available threads.
 
@@ -887,105 +905,18 @@ md"""
 # ╔═╡ cf952cda-7119-11eb-2236-218a27d8e1ac
 hr
 
-# ╔═╡ b9d7d1fb-10b7-412e-a3fb-002659b02b68
-md"## A bit more on parallel programming."
+# ╔═╡ 1ad3f216-fef7-4b70-9b68-ab1de18c3126
+md"""
+## Another parallel programming example 
 
-# ╔═╡ aba4031f-3508-4cd6-8414-8f2b99b0fa09
-md"### Types of parallelism that Julia supports
-
-- synchronous & asynchronous tasks
-- multi-threading
-- distributed computing (multiple-processing, distributed data)
-- GPU computing
-"
-
-# ╔═╡ f5b17782-781c-43a2-89ca-9655906d979b
+### Let's try the [Julia set](https://en.wikipedia.org/wiki/Julia_set).
 """
-The Mandelbrot set escape time function
-"""
-function escapetime(z; maxiter=80)
-    c = z
-    for n = 1:maxiter
-        if abs(z) > 2
-            return n-1
-        end
-        z = z^2 + c
-    end
-    return maxiter
-end
-
-# ╔═╡ e646b05a-c0e6-4768-8062-186492a10ddd
-"""
-Calculate the escape time for each grid point (pixel)
-"""
-function mandel(; width=80, height=20, maxiter=60)
-    out = zeros(Int, height, width)
-    real = range(-2.0, 0.5, length=width)
-    imag = range(-1.0, 1.0, length=height)*im
-    for x in 1:width
-        for y in 1:height
-            z = real[x] + imag[y]
-            out[y,x] = escapetime(z, maxiter=maxiter)
-        end
-    end
-    return out
-end
-
-# ╔═╡ 476a44b3-4969-479c-a7a0-b2b8935f597a
-width = 600; height=450; maxiter=600
-
-# ╔═╡ 9187d20e-d25d-432c-a8d1-bbaa7e20342c
-Gray.((mandel(width=width, height=height, maxiter=maxiter).%maxiter)./100)
-
-# ╔═╡ 7d38feb3-3f1a-4fbf-b2fc-5458ed411cf1
-m = @benchmark mandel(width=width, height=height, maxiter=maxiter)
-
-# ╔═╡ 15d50e5a-8bba-4f83-b297-9df50bf820d7
-function mandelthread(; width=80, height=20, maxiter=80)
-    out = zeros(Int, height, width)
-    real = range(-2.0, 0.5, length=width)
-    imag = range(-1.0, 1.0, length=height)*im
-    Threads.@threads for x in 1:width
-        for y in 1:height
-            z = real[x] + imag[y]
-            out[y,x] = escapetime(z, maxiter=maxiter)
-        end
-    end
-    return out
-end
-
-# ╔═╡ 1995d8cb-6be4-4b90-b9bd-f0d739386850
-mt = @benchmark mandelthread(width=width, height=height, maxiter=maxiter)
 
 # ╔═╡ cc73dec8-2dae-4a68-b6fb-5ae880fedcfd
 br
 
-# ╔═╡ 6245be94-c0b8-46a2-9b6a-a6fee223edec
-function mandelspawn(; width=80, height=20, maxiter=80)
-    out = zeros(Int, height, width)
-    real = range(-2.0, 0.5, length=width)
-    imag = range(-1.0, 1.0, length=height)*im
-    @sync for x in 1:width
-        Threads.@spawn for y in 1:height
-            z = real[x] + imag[y]
-            out[y,x] = escapetime(z, maxiter=maxiter)
-        end
-    end
-    return out
-end
-
-# ╔═╡ 9bc549fe-1f97-431b-bce8-61ade95b2b1f
-ms = @benchmark mandelspawn(width=width, height=height, maxiter=maxiter)
-
-# ╔═╡ 0a38a7fb-f6e8-4531-9f31-a2b4662a2e8a
-md"
-##### 1-thread: $(round(m.times[1]/1e6, digits=2)) ms
-##### $(Threads.nthreads())-threads: $(round(mt.times[1]/1e6, digits=2)) ms
-##### $(width*height)-tasks: $(round(ms.times[1]/1e6, digits=2)) ms
-"
-
-# ╔═╡ 5f1212de-f8fc-443a-bf98-05570e4622f4
-@terminal CUDA.versioninfo()
+# ╔═╡ 4507ca61-1526-4251-8587-2fe6e80c61e5
+md"### Single-threaded version"
 
 # ╔═╡ 09d49654-4d62-4fb3-bfc6-d8585e0f5bb9
 function escape(z0, maxiter)
@@ -998,11 +929,8 @@ function escape(z0, maxiter)
     return maxiter % UInt8
 end
 
-# ╔═╡ 3f67a2b8-9957-4ae4-926d-0dd88173709c
-md"### Single-threaded"
-
 # ╔═╡ 3c41c16b-0c36-4745-8229-3907296acd15
-function juliaset(;width=600, height=450, maxiter=256)
+function juliaset(;width=600, height=450, maxiter=255)
 	real = range(-1.5, 1.5, length=width)
 	imag = range(-1, 1, length=height)*im
     result =  zeros(Int, height, width)
@@ -1015,14 +943,17 @@ function juliaset(;width=600, height=450, maxiter=256)
     return result
 end
 
+# ╔═╡ 63e0878c-a238-47d7-b4a2-90f796132071
+width = 800; height = 600
+
 # ╔═╡ 26e9fe26-293a-4596-a599-3cae117f111c
-js = juliaset()
+js = juliaset(width=width, height=height)
 
 # ╔═╡ 11efd4d9-c7d2-41b3-8ca8-c8d27780e6d9
-Gray.(js/maximum(js))
+Gray.((js)/maximum(js))
 
 # ╔═╡ 141d6198-3451-446d-af6e-c2561d27d0ec
-jss = @benchmark juliaset()
+jss = @benchmark juliaset(width=width, height=height)
 
 # ╔═╡ 92848716-1e63-4a92-8df6-e4347c08f339
 md"### Multi-threaded"
@@ -1042,7 +973,7 @@ function juliaset_threads(;width=600, height=450, maxiter=256)
 end
 
 # ╔═╡ b6b5d6d2-61af-4c4c-bfc1-dc9401f9320c
-jst = @benchmark juliaset_threads()
+jst = @benchmark juliaset_threads(width=width, height=height)
 
 # ╔═╡ d38a7017-e46f-42e8-9d04-18b6b17fac50
 md"### Tasks"
@@ -1062,12 +993,15 @@ function juliaset_spawn(;width=600, height=450, maxiter=256)
 end
 
 # ╔═╡ 6df77ab4-fc6a-48a4-91bc-7791e22f029c
-jsp = @benchmark juliaset_spawn()
+jsp = @benchmark juliaset_spawn(width=width, height=height)
 
 # ╔═╡ d8bd9384-1d42-40ba-953f-774c080aa12c
 md"""
 ### Translating the Julia Set to the GPU
 """
+
+# ╔═╡ 2d64436b-7bbb-44a2-8cc3-de84870c3e0a
+@terminal CUDA.versioninfo()
 
 # ╔═╡ 2f46ddec-3d19-4f65-9d1c-ef853fca945a
 function run!(in, out; maxiter=16)
@@ -1083,7 +1017,7 @@ function juliaset_gpu(;width=600, height=450, maxiter=256)
 end
 
 # ╔═╡ 496a9ed9-d9d4-4836-879f-a4074f7ee64c
-jsg = @benchmark juliaset_gpu()
+jsg = @benchmark juliaset_gpu(width=width, height=height)
 
 # ╔═╡ 7ae1f380-4e59-4b97-9c36-209158bde42e
 md"
@@ -1167,8 +1101,6 @@ md"""## "This is the end, my only friend, the end!"
 # ╟─a7d1d688-64b2-11eb-3c21-159fe6996ff1
 # ╟─9b7ee436-751d-11eb-1ffe-bd3f35127821
 # ╟─0dda3e88-7510-11eb-3ebc-310d68675c2d
-# ╟─8a1ca72c-921f-11eb-022a-e937aac3fb66
-# ╟─d790b994-921f-11eb-1405-0dcfd94d38e2
 # ╟─ca6e9678-7118-11eb-25bd-39cd6b1416c3
 # ╟─dbbe2972-6c70-11eb-3b23-ab10538061b6
 # ╟─85a888f0-6c72-11eb-1f27-3dcdb744e584
@@ -1242,12 +1174,12 @@ md"""## "This is the end, my only friend, the end!"
 # ╟─65661654-6577-11eb-3a2a-cd07152d69ee
 # ╟─5fd01a92-7070-11eb-31fb-898d900d3b0e
 # ╟─4eb669bd-8c69-4f5f-a574-76155df88c67
-# ╠═82081be6-7070-11eb-176c-bd1e2329373e
+# ╟─82081be6-7070-11eb-176c-bd1e2329373e
 # ╟─500dee00-7072-11eb-2a44-dd95d512fd0a
 # ╟─de96f62c-7073-11eb-22a8-b525bb1efd7f
 # ╟─d3cdb9e2-7073-11eb-0753-8bf123599cac
 # ╠═6d23a0cc-7074-11eb-1803-5f9147f47d48
-# ╟─8699174c-7074-11eb-3cf0-e99217589e81
+# ╠═8699174c-7074-11eb-3cf0-e99217589e81
 # ╟─af0d99b4-7074-11eb-1818-95ee43a058cb
 # ╟─997eaf48-7074-11eb-0f16-15e7c1604976
 # ╟─25eb4620-7120-11eb-362b-3b7ea60280f8
@@ -1268,6 +1200,9 @@ md"""## "This is the end, my only friend, the end!"
 # ╟─fb3392e9-6870-422d-9dc1-911f207205ff
 # ╟─020f402c-cbef-4c8f-8d3b-649c00649d3b
 # ╟─5a33f654-657c-11eb-1a9c-1bb3baf532f0
+# ╟─cb97ce85-ba76-419d-bc1d-3e63b3b39519
+# ╟─add016be-fae2-407d-a45c-10f7ed25aa19
+# ╟─245b7dcd-9b6c-43ff-b7ca-8edd81fa3a86
 # ╟─a8398ca8-657d-11eb-0a10-fd6c26ceeffd
 # ╠═6c4a3ef0-657c-11eb-1117-addb8a66db25
 # ╟─861533e8-657d-11eb-2521-f17727427b00
@@ -1275,7 +1210,6 @@ md"""## "This is the end, my only friend, the end!"
 # ╟─0ab6b764-657e-11eb-2aed-b593a642430b
 # ╠═ce725472-657d-11eb-150d-47449caa17e1
 # ╟─d9c50951-7623-4729-83d8-dcc351194585
-# ╟─990d362a-92e2-11eb-0289-6d703732f1a0
 # ╠═e23ec8ee-d035-46db-8da3-b04d0fe844f6
 # ╠═75512cd4-657e-11eb-2640-87279ba81927
 # ╟─eaef6282-7119-11eb-1530-33b741097913
@@ -1283,23 +1217,12 @@ md"""## "This is the end, my only friend, the end!"
 # ╟─911847b4-7075-11eb-20ef-715b719f94f4
 # ╟─7511a470-7075-11eb-123e-eb2c888210ec
 # ╟─cf952cda-7119-11eb-2236-218a27d8e1ac
-# ╟─b9d7d1fb-10b7-412e-a3fb-002659b02b68
-# ╟─aba4031f-3508-4cd6-8414-8f2b99b0fa09
-# ╠═f5b17782-781c-43a2-89ca-9655906d979b
-# ╠═e646b05a-c0e6-4768-8062-186492a10ddd
-# ╠═476a44b3-4969-479c-a7a0-b2b8935f597a
-# ╠═9187d20e-d25d-432c-a8d1-bbaa7e20342c
-# ╠═7d38feb3-3f1a-4fbf-b2fc-5458ed411cf1
-# ╠═15d50e5a-8bba-4f83-b297-9df50bf820d7
-# ╠═1995d8cb-6be4-4b90-b9bd-f0d739386850
+# ╟─1ad3f216-fef7-4b70-9b68-ab1de18c3126
 # ╟─cc73dec8-2dae-4a68-b6fb-5ae880fedcfd
-# ╠═6245be94-c0b8-46a2-9b6a-a6fee223edec
-# ╠═9bc549fe-1f97-431b-bce8-61ade95b2b1f
-# ╠═0a38a7fb-f6e8-4531-9f31-a2b4662a2e8a
-# ╠═5f1212de-f8fc-443a-bf98-05570e4622f4
+# ╟─4507ca61-1526-4251-8587-2fe6e80c61e5
 # ╠═09d49654-4d62-4fb3-bfc6-d8585e0f5bb9
-# ╟─3f67a2b8-9957-4ae4-926d-0dd88173709c
 # ╠═3c41c16b-0c36-4745-8229-3907296acd15
+# ╠═63e0878c-a238-47d7-b4a2-90f796132071
 # ╠═26e9fe26-293a-4596-a599-3cae117f111c
 # ╠═11efd4d9-c7d2-41b3-8ca8-c8d27780e6d9
 # ╠═141d6198-3451-446d-af6e-c2561d27d0ec
@@ -1309,7 +1232,8 @@ md"""## "This is the end, my only friend, the end!"
 # ╟─d38a7017-e46f-42e8-9d04-18b6b17fac50
 # ╠═258f1ba0-fcfe-467c-803a-0fd22b4d9317
 # ╠═6df77ab4-fc6a-48a4-91bc-7791e22f029c
-# ╠═d8bd9384-1d42-40ba-953f-774c080aa12c
+# ╟─d8bd9384-1d42-40ba-953f-774c080aa12c
+# ╠═2d64436b-7bbb-44a2-8cc3-de84870c3e0a
 # ╠═2f46ddec-3d19-4f65-9d1c-ef853fca945a
 # ╠═e02ec379-f5ad-45e6-87eb-82ee5ac7fe9a
 # ╠═496a9ed9-d9d4-4836-879f-a4074f7ee64c
